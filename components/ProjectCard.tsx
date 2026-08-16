@@ -3,7 +3,7 @@ import Image from "next/image";
 import Button from "./Button";
 
 type Project = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   image: string;
@@ -25,13 +25,20 @@ export default function ProjectCard({
 }: ProjectCardProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
-      <div className="relative h-56">
-        <Image
-          src={project.image}
-          alt={project.title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+      <div className="relative h-56 bg-zinc-800">
+        {project.image ? (
+          <Image
+            src={project.image}
+            alt={project.title}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
+            No photo yet
+          </div>
+        )}
         <div className="absolute top-4 right-4 bg-black/70 text-xs px-3 py-1 rounded-full">
           {project.category.toUpperCase()}
         </div>

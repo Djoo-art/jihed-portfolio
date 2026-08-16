@@ -1,13 +1,54 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Category {
+  mobile
+  web
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  title        String
+  description  String   @db.Text
+  category     Category
+  status       ProjectStatus @default(completed)
+
+  // Media — Vercel Blob URLs, not binary data
+  images       String[] // array of Blob URLs, first one is treated as the cover
+  videoUrl     String?  // Blob URL of an uploaded video, nullable
+  apkUrl       String?  // Blob URL of an uploaded APK, nullable
+
+  technologies String[] // e.g. ["Flutter", "Firebase"]
+
+  featured     Boolean  @default(true) // lets you hide a project from the public site without deleting it
+  order        Int      @default(0)    // manual sort order for the grid
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([order])
+}
+
+enum ProjectStatus {
+  completed
+  upcoming
+}
+
+model Profile {
+  id        String   @id @default("profile")
+  name      String   @default("Jihed Ghozzi")
+  title     String   @default("Aspiring Full-Stack & Mobile Developer")
+  bio       String   @db.Text @default("I'm learning React and Next.js from zero.")
+  email     String   @default("your.email@gmail.com")
+  avatarUrl String?
+  updatedAt DateTime @updatedAt
 }
