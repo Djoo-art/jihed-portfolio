@@ -1,38 +1,33 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
+// NOTE: Using a server-proxy upload instead of the documented client-token
+// flow (@vercel/blob/client + handleUpload) because Vercel currently has a
+// confirmed platform bug where the client-upload endpoint (vercel.com/api/blob)
+// returns a CORS error with no Access-Control-Allow-Origin header, blocking
+// the browser's direct upload entirely. See:
+// https://community.vercel.com/t/vercel-blob-client-upload-blocked-by-cors-access-control-allow-origin-missing/46967
+//
+// Trade-off: this caps uploads at ~4.5MB (Vercel serverless function body
+// limit), since the file now passes through our server instead of going
+// straight from the browser to Blob storage. Fine for photos; a real video
+// file may exceed this — revisit once Vercel fixes the client-upload bug.
 
+export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (/* pathname */) => {
-        // TODO: once admin auth (Step 4) exists, verify the session cookie here
-        // and throw if it's missing/invalid — otherwise anyone who finds this
-        // URL can upload directly to your Blob store.
-        return {
-          allowedContentTypes: [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "video/mp4",
-            "video/quicktime",
-            "application/vnd.android.package-archive", // .apk
-          ],
-          maximumSizeInBytes: 200 * 1024 * 1024, // 200MB — plenty for a demo video
-        };
-      },
-      onUploadCompleted: async ({ blob }) => {
-        // Fires after the file actually lands in Blob storage.
-        // Note: this webhook only fires on a deployed (public) URL, not on
-        // localhost — Vercel can't reach your machine to call it back.
-        console.log("blob upload completed:", blob.url);
-      },
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    const blob = await put(file.name, file, {
+      access: "public",
+      addRandomSuffix: true,
     });
 
-    return NextResponse.json(jsonResponse);
+    return NextResponse.json(blob);
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message },
