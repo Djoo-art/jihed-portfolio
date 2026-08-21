@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
 import { UploadCloud, Loader2, CheckCircle2 } from "lucide-react";
 
 type UploaderProps = {
@@ -27,30 +26,42 @@ export default function Uploader({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const handleFile = async (file: File) => {
+  const handleFile = (file: File) => {
     setError(null);
     setDone(false);
     setIsUploading(true);
     setProgress(0);
 
-    try {
-      // This uploads the file DIRECTLY from the browser to Blob storage,
-      // using a short-lived token from /api/upload. The file never passes
-      // through our Next.js server — required for anything over ~4.5MB
-      // (Vercel's serverless function body limit), which any real video hits.
-      const blob = await upload(file.name, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-        onUploadProgress: (event) => setProgress(Math.round(event.percentage)),
-      });
+    const formData = new FormData();
+    formData.append("file", file);
 
-      onUploadComplete(blob.url);
-      setDone(true);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload");
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        setProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
       setIsUploading(false);
-    }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const result = JSON.parse(xhr.responseText);
+        onUploadComplete(result.url);
+        setDone(true);
+      } else {
+        const result = JSON.parse(xhr.responseText || "{}");
+        setError(result.error ?? "Upload failed. Try a smaller file.");
+      }
+    };
+
+    xhr.onerror = () => {
+      setIsUploading(false);
+      setError("Upload failed — network error.");
+    };
+
+    xhr.send(formData);
   };
 
   return (

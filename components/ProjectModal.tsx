@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { X, Download, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "./Button";
@@ -26,7 +27,26 @@ export default function ProjectModal({
   isOpen,
   onClose,
 }: ProjectModalProps) {
+  const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    setActiveImage(0);
+  }, [project?.id]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (!project || !isOpen) return null;
+
+  const gallery =
+    project.images && project.images.length > 0
+      ? project.images
+      : [project.image];
 
   return (
     <div className="fixed inset-0 bg-black/90 z-100 flex items-center justify-center p-4">
@@ -34,7 +54,7 @@ export default function ProjectModal({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-zinc-900 max-w-4xl w-full rounded-3xl overflow-hidden"
+        className="bg-zinc-900 max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-3xl"
       >
         {/* Header */}
         <div className="flex justify-between items-center border-b border-zinc-700 p-6">
@@ -46,7 +66,7 @@ export default function ProjectModal({
 
         <div className="p-8">
           {/* Main Image / Video */}
-          <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-8 relative">
+          <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-4 relative">
             {project.videoUrl ? (
               <iframe
                 width="100%"
@@ -56,13 +76,71 @@ export default function ProjectModal({
                 allowFullScreen
               />
             ) : (
-              <img
-                src={project.image}
-                alt={project.title}
-                className="w-full h-full object-cover"
-              />
+              <>
+                <img
+                  src={gallery[activeImage]}
+                  alt={`${project.title} — photo ${activeImage + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                {gallery.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveImage(
+                          (activeImage - 1 + gallery.length) % gallery.length,
+                        )
+                      }
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 rounded-full p-2 text-white"
+                      aria-label="Previous photo"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveImage((activeImage + 1) % gallery.length)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 rounded-full p-2 text-white"
+                      aria-label="Next photo"
+                    >
+                      ›
+                    </button>
+                    <div className="absolute bottom-3 right-3 bg-black/60 text-xs text-white px-2 py-1 rounded-full">
+                      {activeImage + 1} / {gallery.length}
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
+
+          {/* Thumbnail strip — only when there's more than one photo */}
+          {!project.videoUrl && gallery.length > 1 && (
+            <div className="flex gap-2 mb-8 overflow-x-auto">
+              {gallery.map((url, i) => (
+                <button
+                  type="button"
+                  key={url}
+                  onClick={() => setActiveImage(i)}
+                  className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                    i === activeImage
+                      ? "border-emerald-500"
+                      : "border-transparent opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={url}
+                    alt={`${project.title} thumbnail ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+          {(project.videoUrl || gallery.length <= 1) && (
+            <div className="mb-4" />
+          )}
 
           {/* APK Download Button - Only shows if apkUrl exists */}
           {project.apkUrl && (
