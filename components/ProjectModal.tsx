@@ -28,9 +28,11 @@ export default function ProjectModal({
   onClose,
 }: ProjectModalProps) {
   const [activeImage, setActiveImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     setActiveImage(0);
+    setLightboxOpen(false);
   }, [project?.id]);
 
   useEffect(() => {
@@ -80,7 +82,8 @@ export default function ProjectModal({
                 <img
                   src={gallery[activeImage]}
                   alt={`${project.title} — photo ${activeImage + 1}`}
-                  className="w-full h-full object-cover"
+                  onClick={() => setLightboxOpen(true)}
+                  className="w-full h-full object-contain cursor-zoom-in"
                 />
                 {gallery.length > 1 && (
                   <>
@@ -188,6 +191,61 @@ export default function ProjectModal({
           </Button>
         </div>
       </motion.div>
+
+      {lightboxOpen && !project.videoUrl && (
+        <div
+          className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-6 right-6 text-white/80 hover:text-white"
+            aria-label="Close full-size photo"
+          >
+            <X size={32} />
+          </button>
+
+          <img
+            src={gallery[activeImage]}
+            alt={`${project.title} — photo ${activeImage + 1} full size`}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {gallery.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImage(
+                    (activeImage - 1 + gallery.length) % gallery.length,
+                  );
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 rounded-full p-3 text-white"
+                aria-label="Previous photo"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImage((activeImage + 1) % gallery.length);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 rounded-full p-3 text-white"
+                aria-label="Next photo"
+              >
+                ›
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/60 text-sm text-white px-3 py-1 rounded-full">
+                {activeImage + 1} / {gallery.length}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
